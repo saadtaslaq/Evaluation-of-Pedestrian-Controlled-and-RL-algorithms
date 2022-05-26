@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
+from ast import Import
 import logging
 import math
 import configparser
 import collections
 import os
+import sys
+
+# sys.path.append("/home/saadtaslaq/navrepvenv/lib/python3.6/site-packages/crowd_sim/envs/utils")
+
+# from envs.utils.info import Deadlock, ReachGoal_Ped
 
 import numpy as np
 import gym
@@ -20,6 +26,10 @@ from crowd_sim.envs.utils.info import *
 from crowd_sim.envs.utils.utils import point_to_segment_dist
 from crowd_sim.envs.utils.state import ObservableState
 from crowd_nav.policy.policy_factory import policy_factory
+# from envs.utils.info import Deadlock, ReachGoal_Ped
+# from crowd_sim.util.info import
+# from crowd_sim.envs.uti/ls.info import Deadlock
+
 
 Obstacle = collections.namedtuple(
     "Obstacle", ["location_x", "location_y", "dim", "patch"])
@@ -86,6 +96,10 @@ class CrowdSim(gym.Env):
         self.angular_map_min_angle = None
         self.angular_map_max_angle = None
         self.local_maps_angular = None
+
+        self.distance_to_goal = []
+        self.deadlock_state = []
+        self.deadlock_count = 0
 
     def configure(self, config, silent=False):
         """!
@@ -181,9 +195,7 @@ class CrowdSim(gym.Env):
         #     self.policy.configure(policy_config)
         #     self.policy.set_env(self)
         #     self.policy.load_model(
-        #         os.path.join(
-        #             self.human_model_dir,
-        #             'rl_model.pth'))
+            
 
      
 
@@ -940,36 +952,51 @@ class CrowdSim(gym.Env):
                 collision = True
 
         # Deadlock : check if Pedestrian is closer to any obstacle than the discomfort dist
-        closeToObstacle = False
-        human_size_map = int(
-            np.ceil(
-                (human.radius +
-                 self.discomfort_dist) /
-                self.map_resolution))
-        human_idx_map_x = int(
-            round((px + self.map_size_m / 2.0) / self.map_resolution))
+        # deadlock = False
+        # deadlock_state = []
+        # for i, human in enumerate(self.humans):
+            # print("human.get_velocity =", human.v_pref)
 
-        human_idx_map_y = int(
-            round((py + self.map_size_m / 2.0) / self.map_resolution))
-        start_idx_x = human_idx_map_x - human_size_map
-        end_idx_x = start_idx_x + human_size_map * 2
-        start_idx_x = max(start_idx_x, 0)
-        end_idx_x = min(
-            end_idx_x, int(
-                round(
-                    self.map_size_m / self.map_resolution)))
-        start_idx_y = human_idx_map_y - human_size_map
-        end_idx_y = start_idx_y + human_size_map * 2
-        start_idx_y = max(start_idx_y, 0)
-        end_idx_y = min(
-            end_idx_y, int(
-                round(
-                    self.map_size_m / self.map_resolution)))
-        if end_idx_x > start_idx_x and end_idx_y > start_idx_y:
-            larger_map_around_human = self.map[start_idx_x:end_idx_x,
-                                               start_idx_y:end_idx_y]
-            if np.sum(larger_map_around_human) < larger_map_around_human.size:
-                closeToObstacle = True
+            # human_size_map = int(
+            #     np.ceil(
+            #         (human.radius +
+            #         self.discomfort_dist) /
+            #         self.map_resolution))
+            # human_idx_map_x = int(
+            #     round((px + self.map_size_m / 2.0) / self.map_resolution))
+
+            # human_idx_map_y = int(
+            #     round((py + self.map_size_m / 2.0) / self.map_resolution))
+            # start_idx_x = human_idx_map_x - human_size_map
+            # end_idx_x = start_idx_x + human_size_map * 2
+            # start_idx_x = max(start_idx_x, 0)
+            # end_idx_x = min(
+            #     end_idx_x, int(
+            #         round(
+            #             self.map_size_m / self.map_resolution)))
+            # start_idx_y = human_idx_map_y - human_size_map
+            # end_idx_y = start_idx_y + human_size_map * 2
+            # start_idx_y = max(start_idx_y, 0)
+            # end_idx_y = min(
+            #     end_idx_y, int(
+            #         round(
+            #             self.map_size_m / self.map_resolution)))
+            # # print("start_idx_x = ", start_idx_x)
+            # # print("end_idx_x = ", end_idx_x)
+            # # print("start_idx_y = ", start_idx_y)
+            # # print("end_idx_y = ", end_idx_y)
+            # if end_idx_x > start_idx_x and end_idx_y > start_idx_y:
+            #     larger_map_around_human = self.map[start_idx_x:end_idx_x,
+            #                                     start_idx_y:end_idx_y]
+            #     # print("larger_map_around_human = ", larger_map_around_human[1][1])
+            #     print("YES")
+            #     if (np.sum(larger_map_around_human) < larger_map_around_human.size) and (floor(human.v_pref) == 0):
+            #         print("YES TWICE")
+            #         # print("larger_map_around_human.size = ", larger_map_around_human.size)
+            #         # print("larger_map_around_human = ", larger_map_around_human)
+            #         # print("YES CLOSE TO OBSTACLE")
+            #         deadlock = True
+            #         deadlock_state.append(deadlock)
 
 
 
@@ -981,7 +1008,7 @@ class CrowdSim(gym.Env):
                py >= border[1][1] - self.robot.radius:
                 collision = True
 
-        # check if robot is closer to any obstacle than the discomfort dist
+        # check if robot is closer to any obstacle than the discomfort dist plus stopping (deadlock)
         closeToObstacle = False
         robot_size_map = int(
             np.ceil(
@@ -1006,7 +1033,7 @@ class CrowdSim(gym.Env):
         if end_idx_x > start_idx_x and end_idx_y > start_idx_y:
             larger_map_around_robot = self.map[start_idx_x:end_idx_x,
                                                start_idx_y:end_idx_y]
-            if np.sum(larger_map_around_robot) < larger_map_around_robot.size:
+            if np.sum(larger_map_around_robot) < larger_map_around_robot.size and (math.floor(human.v_pref) == 0):
                 closeToObstacle = True
 
         # collision detection between humans
@@ -1031,61 +1058,249 @@ class CrowdSim(gym.Env):
             np.array(
                 self.robot.get_goal_position())) < self.robot.radius
         
-
+      
+        
+        
         ## Reaching goal for pedestrian
-        ## NOT SURE
-        end_position_ped = np.array(
+    
+        rewards_ped = []
+
+        for i, human in enumerate(self.humans):
+            ## Reaching goal for pedestrian
+            end_position_ped = np.array(
             human.compute_position(
                 action, self.time_step))
-        reaching_goal_ped = norm(
-            end_position_ped -
-            np.array(
-                human.get_goal_position())) < human.radius
+            reaching_goal_ped = norm(
+                end_position_ped -
+                np.array(
+                    human.get_goal_position())) < human.radius
+            
+            ## Deadlock
+
+            print("human.v_pref =", human.v_pref)
+
+            # human_size_map = int(
+            #     np.ceil(
+            #         (human.radius +
+            #         self.discomfort_dist) /
+            #         self.map_resolution))
+            # human_idx_map_x = int(
+            #     round((px + self.map_size_m / 2.0) / self.map_resolution))
+            # print("radius = ", human_size_map)
+            # human_idx_map_y = int(
+            #     round((py + self.map_size_m / 2.0) / self.map_resolution))
+            # start_idx_x = human_idx_map_x - human_size_map
+            # end_idx_x = start_idx_x + human_size_map * 2
+            # start_idx_x = max(start_idx_x, 0)
+            # end_idx_x = min(
+            #     end_idx_x, int(
+            #         round(
+            #             self.map_size_m / self.map_resolution)))
+            # start_idx_y = human_idx_map_y - human_size_map
+            # end_idx_y = start_idx_y + human_size_map * 2
+            # start_idx_y = max(start_idx_y, 0)
+            # end_idx_y = min(
+            #     end_idx_y, int(
+            #         round(
+            #             self.map_size_m / self.map_resolution)))
+            # if end_idx_x > start_idx_x and end_idx_y > start_idx_y:
+            #     larger_map_around_human = self.map[start_idx_x:end_idx_x,
+            #                                     start_idx_y:end_idx_y]
+            #     print("larger_map_around_human = ",larger_map_around_human)
+            #     print("start_idx_x = ",start_idx_x)
+            #     print("end_idx_x = ",end_idx_x)
+            #     print("start_idx_y = ",start_idx_y)
+            #     print("end_idx_y = ",end_idx_y)
+            #     # print("larger_map_around_human = ", larger_map_around_human[1][1])
+            #     print("YES")
+            #     print("math.floor(human.v_pref)", math.floor(human.v_pref))
+            #     print("math.floor(human.v_pref) == 0", math.floor(human.v_pref) == 0)
+            #     print("np.sum(larger_map_around_human)", np.sum(larger_map_around_human))
+            #     print("larger_map_around_human.size", larger_map_around_human.size)
+            #     print("(np.sum(larger_map_around_human) < larger_map_around_human.size)", (np.sum(larger_map_around_human) < larger_map_around_human.size))
+            #     if (np.sum(larger_map_around_human) < larger_map_around_human.size) and (math.floor(human.v_pref) == 0):
+            #         print("YES TWICE")
+            #         # print("larger_map_around_human.size = ", larger_map_around_human.size)
+            #         # print("larger_map_around_human = ", larger_map_around_human)
+            #         # print("YES CLOSE TO OBSTACLE")
+            #         deadlock = True
+            #         deadlock_state.append(deadlock)
+            #         # print("deadlock_state = ", deadlock_state)
+
+            # for i in (deadlock_state):
+            deadlock = False
+
+            px, py = human.compute_position(action, self.time_step)  # next pos
+            human_idx_map_x = int(
+                round((px + self.map_size_m / 2.0) / self.map_resolution))
+            human_idx_map_y = int(
+                round((py + self.map_size_m / 2.0) / self.map_resolution))
+            human_size_map = int(
+                np.ceil(
+                    self.robot.radius /
+                    np.sqrt(2.0) /
+                    self.map_resolution))
+
+            start_idx_x = human_idx_map_x - human_size_map
+            end_idx_x = start_idx_x + human_size_map * 2
+            start_idx_x = max(start_idx_x, 0)
+            end_idx_x = min(
+                end_idx_x, int(
+                    round(
+                        self.map_size_m / self.map_resolution)))
+            start_idx_y = human_idx_map_y - human_size_map
+            end_idx_y = start_idx_y + human_size_map * 2
+            start_idx_y = max(start_idx_y, 0)
+            end_idx_y = min(
+                end_idx_y, int(
+                    round(
+                        self.map_size_m / self.map_resolution)))
+            if end_idx_x > start_idx_x and end_idx_y > start_idx_y:
+                map_around_human = self.map[start_idx_x:end_idx_x,
+                                            start_idx_y:end_idx_y]
+                if (np.sum(map_around_human) < map_around_human.size) and (math.floor(human.v_pref) == 0):
+                    deadlock = True
+                    print("deadlock =======",deadlock)
+                    self.deadlock_state.append(deadlock)
+                    print("deadlock_state = ", self.deadlock_state)
 
 
-        if self.global_time >= self.time_limit:
-            reward = self.timeout_penalty
-            done = True
-            info = Timeout()
-        elif reaching_goal_ped:
-            reward = self.success_reward
-            done = True
-            info = ReachGoal_Ped()
-        elif self.deadlock:
-            reward = self.deadlock_penalty
-            done = True
-            info = Deadlock()
-        elif reaching_goal:
-            reward = self.success_reward
-            done = True
-            info = ReachGoal()
-        elif collision:
-            reward = self.collision_penalty
-            done = True
-            info = Collision()
-        elif collision_other_agent:
-            reward = 0
-            done = True
-            info = CollisionOtherAgent()
-        elif closeToObstacle:
-            reward = - self.discomfort_penalty_factor * self.time_step * 0.1
-            done = False
-            info = Danger(0.1)
-        elif dmin < self.discomfort_dist:
-            reward = (dmin - self.discomfort_dist) * \
-                self.discomfort_penalty_factor * self.time_step
-            done = False
-            info = Danger(dmin)
-        elif abs(action.r) > 0:
-            reward = abs(action.r) * self.rotation_penalty_factor
-            done = False
-            info = Nothing()
-        else:
-            reward = 0
-            done = False
-            info = Nothing()
+                    ## Distance to goal when the pedestrian stopped far away from the goal
+                    end_position = np.array(
+                        human.compute_position(
+                        action, self.time_step))
+                    distance_to_goal_ped = norm(
+                        end_position -
+                        np.array(
+                            human.get_goal_position()))
+                    print("YES STOPPED AND DISTACE IS = ",distance_to_goal_ped)
+                    self.distance_to_goal.append(distance_to_goal_ped)
+                    # print("np.mean(distance_to_goal = ", np.mean(distance_to_goal))
+            print('distance to goal is: {:.2f}+-{:.2f}'.format(np.mean(self.distance_to_goal), np.std(self.distance_to_goal)))
+            print("np.mean(distance_to_goal = ", np.mean(self.distance_to_goal))
+            print("YES STOPPED AND ALL DISTANCE IS = ",self.distance_to_goal)
+
+            # for element in self.deadlock_state:
+            #     self.deadlock_count += 1
+            
+            print("""Number of deadlock for 100 episodes is = {:.2f}, the average number of deadlock for 
+                    one test is {:.2f}+-{:.2f}""".format(len(self.deadlock_state),np.mean(len(self.deadlock_state)), np.std(len(self.deadlock_state))))
+            
+            if self.global_time >= self.time_limit:
+                reward = self.timeout_penalty
+                done = True
+                info = Timeout()
+            elif closeToObstacle:
+                # print("deadlock_state = ", deadlock_state)
+                print("YES DEADLOCK MATE")
+                reward = - self.discomfort_penalty_factor * self.time_step * 0.1
+                done = False
+                info = Danger(0.1)
+                print("info Danger =", info)
+            elif reaching_goal_ped:
+                reward = self.success_reward
+                # print("YES PEDESTRIAN REACHED GOAL")
+                # print("SUCCESS REWARD = ", reward)
+                done = False
+                info = ReachGoal()
+            ## Distance for pedestrian to goal
+        
+            
+
+            # elif deadlock:
+            #     print("YES DEADLOCK MATE")
+            #     reward = - self.discomfort_penalty_factor * self.time_step * 0.1
+            #     done = False
+            #     info = Deadlock(0.1)
+                # info = Danger(0.1)
+        # print("end_position_ped = ", end_position_ped)
+        # print("human.get_goal_position() = ", human.get_goal_position())
+        # print("human.radius = ", human.radius)
+        # print("reaching_goal_ped = ", reaching_goal_ped)
+        # print("human.reached_destination() = ", human.reached_destination())
+            elif collision:
+                reward = self.collision_penalty
+                done = True
+                info = Collision()
+            elif collision_other_agent:
+                reward = 0
+                done = True
+                info = CollisionOtherAgent()
+            # elif deadlock_state:
+            #     print("YES DEADLOCK MATE")
+            #     reward = - self.discomfort_penalty_factor * self.time_step * 0.1
+            #     done = False
+            #     info = Danger(0.1)
+            elif dmin < self.discomfort_dist:
+                reward = (dmin - self.discomfort_dist) * \
+                    self.discomfort_penalty_factor * self.time_step
+                done = False
+                info = Danger(dmin)
+            elif abs(action.r) > 0:
+                reward = abs(action.r) * self.rotation_penalty_factor
+                done = False
+                info = Nothing()
+            else:
+                reward = 0
+                done = False
+                info = Nothing()
+
+            
+            # print("distance_to_goal = ", distance_to_goal)
+       
+            
+
+        # if self.global_time >= self.time_limit:
+        #     reward = self.timeout_penalty
+        #     done = True
+        #     info = Timeout()
+        # elif reaching_goal_ped:
+        #     print("YES PEDESTRIAN REACHED GOAL")
+        #     reward = self.success_reward
+        #     done = True
+        #     info = ReachGoal_Ped()
+        # elif deadlock:
+        #     print("YES DEADLOCK MATE")
+        #     reward = - self.discomfort_penalty_factor * self.time_step * 0.1
+        #     done = False
+        #     info = Deadlock(0.1)
+        #     # info = Danger(0.1)
+        # elif reaching_goal_ped:
+        #     for i in rewards_ped:
+        #         if rewards_ped[i] == True:
+        #             print("YES IM INSIDE")
+        #             reward = self.success_reward
+        #             done = True
+        #             info = ReachGoal()
+        # elif collision:
+        #     reward = self.collision_penalty
+        #     done = True
+        #     info = Collision()
+        # elif collision_other_agent:
+        #     reward = 0
+        #     done = True
+        #     info = CollisionOtherAgent()
+        # # elif deadlock_state:
+        #     print("YES DEADLOCK MATE")
+        #     reward = - self.discomfort_penalty_factor * self.time_step * 0.1
+        #     done = False
+        #     info = Danger(0.1)
+        # elif dmin < self.discomfort_dist:
+        #     reward = (dmin - self.discomfort_dist) * \
+        #         self.discomfort_penalty_factor * self.time_step
+        #     done = False
+        #     info = Danger(dmin)
+        # elif abs(action.r) > 0:
+        #     reward = abs(action.r) * self.rotation_penalty_factor
+        #     done = False
+        #     info = Nothing()
+        # else:
+        #     reward = 0
+        #     done = False
+        #     info = Nothing()
 
         if update:
+
             if hasattr(self.robot, 'attention_weights'):
                 self.attention_weights.append(self.robot.attention_weights)
 
@@ -1107,12 +1322,12 @@ class CrowdSim(gym.Env):
                 # print("human times =", self.human_times)
                 if self.human_times[i] == 0 and human.reached_destination():
                     self.human_times[i] = self.global_time
-                    print("human times 2 =", self.human_times)
+                    # print("human times 2 =", self.human_times)
 
 
             # compute the observation
             ob = [agent.get_observable_state()
-                  for agent in self.humans + self.other_robots]
+                for agent in self.humans + self.other_robots]
             # store state, action value and attention weights
             self.states.append([self.robot.get_full_state(),
                                 [human.get_full_state() for human in self.humans],
