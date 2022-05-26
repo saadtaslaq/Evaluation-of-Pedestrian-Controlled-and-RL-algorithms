@@ -1,3 +1,265 @@
+######################################## KAREN ZHIXIAN CHANGES ######################################
+# import os
+# import numpy as np
+# from tqdm import tqdm
+# from stable_baselines import PPO2
+# from navrep.envs.navreptrainencodedenv import NavRepTrainEncodedEnv
+# import time
+# from crowd_sim.envs.utils.info import Timeout, ReachGoal, Danger, Collision, CollisionOtherAgent
+# from navrep.tools.commonargs import parse_common_args
+
+# import crowd_sim  # adds CrowdSim-v0 to gym  # noqa
+# from crowd_sim.envs.crowd_sim import CrowdSim  # reference to env code  # noqa
+
+# from crowd_sim.envs.crowd_sim import ReachGoal 
+
+# class NavRepCPolicy(object):
+#     """ wrapper for gym policies """
+#     def __init__(self, model=None): 
+#         if model is not None:
+#             self.model = model
+#         else:
+#             self.model_path = os.path.expanduser(
+#                 # "~/navrep/models/gym/navreptrainencodedenv_2020_09_17__09_15_17_PPO_VAE_LSTM_V_ONLY_V32M512_ckpt")
+#                 # "~/navrep/models/gym/navreptrainencodedenv_2020_09_22__01_14_06_PPO_VAE_LSTM_V_ONLY_V32M512_ckpt")
+#                 # "~/navrep/models/gym/navreptrainencodedenv_2020_09_19__13_27_16_PPO_VAE_LSTM_V_ONLY_V32M512_ckpt")
+#                 # "~/navrep/models/gym/navreptrainencodedenv_2022_05_17__19_30_10_PPO_VAE_LSTM_V_ONLY_V32M512_ckpt")
+#                 # "~/navrep/models/gym/navreptrainencodedenv_2022_01_31__16_23_55_PPO_VAE_LSTM_V_ONLY_V32M512_ckpt")
+#                 "~/navrep/models/gym/navreptrainencodedenv_2022_05_17__23_59_07_PPO_VAE_LSTM_V_ONLY_V32M512_ckpt")
+                
+                
+#             self.model = PPO2.load(self.model_path) 
+#             print("Model '{}' loaded".format(self.model_path))
+
+#     def act(self, obs):
+#         action, _states = self.model.predict(obs, deterministic=True)
+#         return action
+
+
+# def run_test_episodes(env, policy, render=False, print_failure=True, num_episodes=100):
+#     success_times = []
+#     collision_times = []
+#     ped_collision_times = []
+#     collision_other_agent_times = []
+#     timeout_times = []
+#     ped_timeout_times = []
+
+#     success = 0
+#     ped_success=0
+#     collision = 0
+#     ped_collision=0
+#     collision_other_agent = 0
+#     ped_collision_other_agent=0
+#     timeout = 0
+#     too_close = 0
+#     min_dist = []
+#     ped_success_times = []
+#     cumulative_rewards = []
+#     collision_cases = []
+#     collision_other_agent_cases = []
+#     ped_collision_cases = []
+#     timeout_cases = []
+#     deadlock = 0
+#     progress_bar = tqdm(range(num_episodes), total=num_episodes)
+#     start_time = time.time()
+    
+#     start_times =[]
+#     end_times = []
+
+
+#     deadlock_per_episode = []
+#     for i in progress_bar:
+#         check = 0
+#         progress_bar.set_description("Case {}".format(i))
+#         ob = env.reset()
+#         done = False
+#         env_time = 0
+#         deadlock = 0
+#         while not done: # False
+#             print("done=", done)
+#             action = policy.act(ob)
+#             ob, _, done, info = env.step(action)
+#             event = info['event']
+#             if render:
+#                 env.render('human')  # robocentric=True, save_to_file=True)
+#             env_time += env._get_dt()
+#             print("event = ", event)
+#             print("info = ", info)
+
+#             if isinstance(event, Danger):
+#                 too_close += 1
+#                 deadlock += 1
+#                 min_dist.append(event.min_dist)
+#                 check = 1
+#             elif isinstance(event, ReachGoal):
+#                 print("YES REACHED GOAL")
+#                 # ped_success += 1
+#                 # ped_success_times.append(env_time)
+#                 success += 1
+#                 success_times.append(env_time)
+#         if check ==1:
+#             deadlock_per_episode.append(deadlock)
+#         else:
+#             deadlock_per_episode.append(0)
+#         env_time += env._get_dt()
+#         print("envv timeeeee: ", env_time)
+#         if isinstance(event, Collision):
+#             collision += 1
+#             collision_cases.append(i)
+#             collision_times.append(env_time)
+#         elif isinstance(event, CollisionOtherAgent):
+#             collision_other_agent += 1
+#             collision_other_agent_cases.append(i)
+#             collision_other_agent_times.append(env_time)
+#         elif isinstance(event, Timeout):
+#             timeout += 1
+#             timeout_cases.append(i)
+#             timeout_times.append(env_time)
+#         # /home/caris/Code/navrep/navrep/scripts/test_navrep.py
+#         # else:
+#         #     raise ValueError('Invalid end signal from environment')
+#         #     TODO: for each in Pedstrain
+#         #             if isinstance(event, ReachGoal):
+#         #                 success += 1
+#         #                 success_times.append(env_time)
+#         #             elif isinstance(event, Collision):
+#         #                 collision += 1
+#         #                 collision_cases.append(i)
+#         #                 collision_times.append(env_time)
+#         #             elif isinstance(event, CollisionOtherAgent):
+#         #                 collision_other_agent += 1
+#         #                 collision_other_agent_cases.append(i)
+#         #                 collision_other_agent_times.append(env_time)
+#         #             elif isinstance(event, Timeout):
+#         #                 timeout += 1
+#         #                 timeout_cases.append(i)
+#         #                 timeout_times.append(env_time)
+#         end_time = time.time() - start_time
+#         end_times.append(end_time)
+
+    
+#     # print(end_times)
+
+
+#     # ##### Statistic for all Peds with the appearance of the robot #######
+ 
+#     # ped_success_rate = ped_success/ float(num_episodes)
+#     # print("ped_success = ", ped_success)
+#     # ped_collision_rate = ped_collision / float(num_episodes)
+#     # ped_collision_other_agent_rate = ped_collision_other_agent / \
+#     #     float(num_episodes)
+
+
+#     # ped_avg_nav_time = sum(ped_success_times) / float(len(ped_success_times)
+#     #                                     ) if ped_success_times else np.nan
+    
+#     # total_time = sum(ped_success_times + ped_collision_times + collision_other_agent_times + ped_timeout_times)
+#     # deadlocks = too_close / float(total_time)
+
+#     # total_time_ped = (time.time() - start_time)
+#     # print(total_time_ped)
+#     # computational_time = total_time_ped / float(num_episodes)
+
+#     # print("""Ped has success rate: {:.2f} Ped nav time: {:.2f}, 
+#     #         computation time: {:.4f}, deadlocks : {:.4f},
+#     #         Ped colliding with other agents rate: {:.4f}""".format(
+#     #         ped_success_rate,
+#     #         ped_avg_nav_time,
+#     #         computational_time,
+#     #         deadlocks,
+#     #         ped_collision_other_agent_rate
+#     #     )
+#     # )                                         ) if success_times else np.nan
+ 
+#                                 ##### Statistic for all Peds with the appearance of the robot #######
+ 
+#     # success_rate = success/ float(num_episodes)
+#     # print("success = ", success)
+#     # collision_rate = collision / float(num_episodes)
+#     # collision_other_agent_rate = collision_other_agent / \
+#     #     float(num_episodes)
+
+
+#     # avg_nav_time = sum(success_times) / float(len(success_times)
+#     #                                     ) if success_times else np.nan
+
+#     # statistic for Robot
+#     success_rate = success / float(num_episodes)
+#     collision_rate = collision / float(num_episodes)
+#     collision_other_agent_rate = collision_other_agent / \
+#         float(num_episodes)
+#     assert success + collision + timeout + collision_other_agent == num_episodes
+#     # if success_times == 0:
+#     #     print('Success times: 0')
+#     # else:   
+#     avg_nav_time = sum(success_times) / float(len(success_times)
+#                                                 ) if success_times else np.nan
+
+    
+#     total_time = sum(success_times + collision_times + collision_other_agent_times + timeout_times)
+#     # print("totaltime:", total_time)
+#     # print("tooclose ", too_close)
+#     # print("success_times", success_times)
+#     # print("collision_times", collision_times)
+#     # print("collision_other_agent_times", collision_other_agent_times)
+#     # print("timeout_times", timeout_times)
+#     # print('collision case ', collision_cases)
+#     print('deadlock per episode is: ', deadlock_per_episode)
+#     deadlocks = too_close / float(total_time)
+
+#     total_time_ped = (time.time() - start_time)
+#     # print('total_time_ped is', total_time_ped)
+#     computational_time = total_time_ped / float(num_episodes)
+
+#     print("""Robot has success rate: {:.2f} Robot nav time: {:.2f}, 
+#             computation time: {:.4f},
+#             mean of deadlock: {:.4f},
+#             sd of deadlock: {:.4f}""".format(
+#             success_rate,
+#             total_time_ped,
+#             computational_time,
+#             np.mean(deadlock_per_episode),
+#             np.std(deadlock_per_episode)
+
+#         )
+#     )
+   
+
+# #     print(
+# #         """has success rate: {:.2f}, collision rate: {:.2f},
+# #         collision from other agents rate: {:.2f}, nav time: {:.2f}, total reward: {:.4f}""".format(
+# #             success_rate,
+# #             collision_rate,
+# #             collision_other_agent_rate,
+# #             avg_nav_time,
+# #             np.mean(cumulative_rewards)
+# #         )
+# #     )computational_timeverage min separate distance in danger: %self.map_list.2f',
+# #         too_close / float(total_time),
+# #         np.mean(min_dist))
+
+
+# #     if print_failure:
+# #         print('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
+# #         print('Collision fro    total_time = sum(success_times + collision_times + collision_other_agent_times + timeout_times)
+# # m other agent cases: ' + ' '.join([str(x) for x in collision_other_agent_cases]))
+# #         print('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
+
+#     return success_rate, avg_nav_time, computational_time, deadlocks, collision_other_agent_rate
+
+
+# if __name__ == '__main__':
+#     args, _ = parse_common_args()
+
+#     if args.environment is None or args.environment == "navreptrain":
+#         env = NavRepTrainEncodedEnv(args.backend, args.encoding, silent=True, scenario='test')
+#         policy = NavRepCPolicy()
+#     else:
+#         raise NotImplementedError
+
+#     run_test_episodes(env, policy, render=args.render)
+
+############################################## SAAD CHANGES #####################################
 import os
 import numpy as np
 from tqdm import tqdm
@@ -11,6 +273,7 @@ from crowd_sim.envs.utils.info import *
 from navrep.tools.commonargs import parse_common_args
 from crowd_sim.envs.crowd_sim import CrowdSim  # reference to env code  # noqa
 # from crowd_sim.envs.utils.info import 
+
 
 import gym
 import logging
@@ -66,6 +329,8 @@ def run_test_episodes(env, policy, render=False, print_failure=True, num_episode
 
 
 
+
+
 #    avg_speed = []
 #    speed_violation = []
 #    social_violation_cnt = []
@@ -78,7 +343,7 @@ def run_test_episodes(env, policy, render=False, print_failure=True, num_episode
    start_time = time.time()
 
    for i in progress_bar:
-       
+       print("i", i)
 
        progress_bar.set_description("Case {}".format(i))
 
@@ -86,6 +351,7 @@ def run_test_episodes(env, policy, render=False, print_failure=True, num_episode
        done = False
        env_time = 0
        rewards = []
+       Check = 0
  
  
        episodic_info = {
@@ -108,8 +374,9 @@ def run_test_episodes(env, policy, render=False, print_failure=True, num_episode
        while not done:
            # print("CCCCCCCCCCCCCCCCCCC", env.observation_space.shape)
            action = policy.act(ob)
-           ob, reward, done, info = env.step(action)
-
+           ob, reward, done, info, distance_to_goal = env.step(action)
+           print("distance_to_goal fgdfdgdfgfdg", distance_to_goal)
+           
            print("info =", info)
            event = info['event']
            print("event ==== ", event)
@@ -119,16 +386,18 @@ def run_test_episodes(env, policy, render=False, print_failure=True, num_episode
            if isinstance(event, Danger):
                deadlock += 1
                min_dist.append(event.min_dist)
-               deadlock_count.append(deadlock)
-            #    Check = 1
+               
+               Check = 1
         #    rewards.append(reward)
         #    states += 1
            elif isinstance(event, ReachGoal):
             #    print("YES REACHED GOAL")
                success += 1
                success_times.append(env_time)
-    #    if Check == 1:
-    #        deadlock_count.append(deadlock)
+       if Check == 1:
+           deadlock_count.append(deadlock)
+       else:
+            deadlock_count.append(0)
 
         #    episodic_info['deadlock'] += info['deadlock']
         #    if isinstance(event, Deadlock):
@@ -265,25 +534,60 @@ def run_test_episodes(env, policy, render=False, print_failure=True, num_episode
    ped_avg_nav_time = sum(success_times) / float(len(success_times)
                                             ) if success_times else np.nan
                                             
-   ped_success_rate = success / float(num_episodes)
-   print("ped_success_rate")
+   ped_success_rate = success / float((num_episodes)
+                                            ) if success_times else np.nan
+   print("ped_success_rate = ",ped_success_rate)
    total_time_ped = sum(success_times + collision_times + collision_other_agent_times + timeout_times)
    avg_deadlock_time = deadlock / float(total_time_ped)
-
+   print("computational_time = ", computational_time)
+   print("ped_avg_nav_time = ", ped_avg_nav_time)
+   print("ped_success_rate = ", ped_success_rate)
+   print("avg_deadlock_time = ", avg_deadlock_time)
+   print("deadlock_count = ", deadlock_count)
+   deadlock_counter = 0
+    # for i in range(len(deadlock_count)):
+    #     print(deadlock_count[i])
+   for i in range(len(deadlock_count)):
+       deadlock_counter += deadlock_count[i]
 #    print("SUCCESS = ", success)
 #    print("success_times = ", success_times)
 #    print("too_close = ", deadlock)
+   maps_with_deadlock =[]
+   for i in deadlock_count:
+       if i > 0:
+           maps_with_deadlock.append(i+1)
+
+   
+   import matplotlib.pyplot as plt
+   plt.figure(1) 
+   bar_width = 1 # set this to whatever you want
+   positions = np.arange(100)
+   plt.bar(positions, deadlock_count, bar_width)
+# #    plt.xticks(positions + bar_width / 2, ('0', '1', '2', '3'))
+   plt.show()
+
+#    plt.figure(2)
+#    d_positions = np.arange(100)
+#    plt.bar(d_positions, distance_to_goal[0:100], bar_width)
+# #    plt.xticks(positions + bar_width / 2, ('0', '1', '2', '3'))
+#    plt.show()
+
+   print("maps_with_deadlock: ", maps_with_deadlock)
    print(
-       """Frequency of being in deadlock: {:.2f}, Distance to goal for pedestrian: {:.2f}, Average number of deadlock plus standard deviation is {:.2f}+-{:.2f}, 
+       """Frequency of being in deadlock: {:.2f}, Deadlock for pedestrian: {:.2f}, Standard deviation of Deadlocks {:.2f} 
        Computational time: {:.2f}, Pedestrian navigation time: {:.2f}, Pedestrian success rate: {:.2f}""".format(
            avg_deadlock_time,
-           deadlock_count,
-           np.mean(deadlock_count),
+           np.sum(deadlock_count),
+
            np.std(deadlock_count),
            computational_time,
            ped_avg_nav_time,
            ped_success_rate)
    )
+    
+#         )
+   
+
   
 
    
@@ -316,19 +620,4 @@ if __name__ == '__main__':
        policy = NavRepCPolicy()
    else:
        raise NotImplementedError
- 
    run_test_episodes(env, policy, render=args.render)
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
